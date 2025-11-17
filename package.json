@@ -1,0 +1,35 @@
+{
+  "name": "fakestep",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "watch:css": "tailwindcss -i src/styles.css -o public/css/output.css --watch",
+    "start": "node index.js",
+    "watch:server": "nodemon index.js",
+    "dev": "concurrently \"npm:watch:css\" \"npm:watch:server\"",
+    "build:css": "tailwindcss -i src/styles.css -o public/css/output.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.17",
+    "axios": "^1.13.2",
+    "body-parser": "^2.2.0",
+    "dotenv": "^17.2.3",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "googleapis": "^166.0.0",
+    "mongoose": "^8.19.4",
+    "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.22",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.11",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17"
+  }
+}

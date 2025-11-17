@@ -1,0 +1,24 @@
+<!-- views/oauth.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Google OAuth - StepUp Faker</title>
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white p-8 rounded shadow-md w-96 text-center">
+    <h1 class="text-2xl font-bold mb-4">Connect Google Fit</h1>
+    <p class="text-gray-600 mb-6">Click below to authorize access to Google Fit</p>
+    <a href="<%= authUrl %>" class="bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded inline-block">
+      🔗 Connect with Google
+    </a>
+    <br>
+    <a href="/" class="text-gray-500 text-sm mt-4 inline-block">← Back to Home</a>
+  </div>
+</body>
+<script>
+    console.log(authUrl);
+    
+</script>
+</html>

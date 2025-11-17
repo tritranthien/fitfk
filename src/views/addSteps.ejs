@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Steps</title>
+  <link href="/styles.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white p-8 rounded shadow-md w-96">
+    <h1 class="text-2xl font-bold mb-4">Add Steps</h1>
+    <form action="/steps/add" method="POST" class="space-y-4">
+      <input type="text" name="userId" placeholder="User ID" class="w-full p-2 border rounded" required>
+      <input type="number" name="steps" placeholder="Number of Steps" class="w-full p-2 border rounded" required>
+      <button type="submit" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded w-full">Send Steps</button>
+    </form>
+  </div>
+</body>
+</html>
