@@ -25,6 +25,8 @@ const __dirname = path.dirname(__filename);
 
 
 const app = express();
+app.set("trust proxy", 1); 
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'mysecret',
   resave: false,
@@ -35,7 +37,7 @@ app.use(session({
   }),
   cookie: { 
     maxAge: 1000 * 60 * 60 * 24, // 1 ngày
-    secure: process.env.NODE_ENV === 'production', // chỉ dùng HTTPS khi production
+    secure: false, // chỉ dùng HTTPS khi production
     httpOnly: true
   }
 }));
