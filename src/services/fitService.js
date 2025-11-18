@@ -7,14 +7,19 @@ const APP_NAME = 'StepUp Simulator';
 
 /**
  * Tạo hoặc lấy DataSource từ Google Fit
+ * @param {OAuth2Client} auth - Authenticated OAuth2 client
+ * @param {string} dbUserId - MongoDB user ID (for database storage)
  */
-export async function ensureDataSource(auth, userId) {
+export async function ensureDataSource(auth, dbUserId) {
   const fitness = google.fitness({ version: 'v1', auth });
+  
+  // Always use "me" for Google Fit API
+  const fitUserId = "me";
 
   try {
     // Thử tạo DataSource mới
     const res = await fitness.users.dataSources.create({
-      userId: 'me',
+      userId: fitUserId,
       requestBody: {
         dataStreamName: DATA_STREAM_NAME,
         type: 'raw',
@@ -24,32 +29,32 @@ export async function ensureDataSource(auth, userId) {
     });
 
     const dataSourceId = res.data.dataStreamId;
-    console.log(`✅ Created new DataSource for user ${userId}: ${dataSourceId}`);
+    console.log(`✅ Created new DataSource: ${dataSourceId}`);
 
-    // Lưu vào DB
-    await Token.findOneAndUpdate({ userId }, { dataSourceId }, { new: true });
+    // Lưu vào DB using MongoDB userId
+    await Token.findOneAndUpdate({ userId: dbUserId }, { dataSourceId }, { new: true });
     return dataSourceId;
 
   } catch (err) {
     if (err.code === 409) {
       // DataSource đã tồn tại, lấy từ Google Fit
-      console.log(`ℹ️ DataSource already exists for user ${userId}, fetching...`);
+      console.log(`ℹ️ DataSource already exists, fetching...`);
       
-      const existingSources = await fitness.users.dataSources.list({ userId: 'me' });
+      const existingSources = await fitness.users.dataSources.list({ userId: fitUserId });
       const existing = existingSources.data.dataSource?.find(
         ds => ds.dataType.name === 'com.google.step_count.delta' 
            && ds.dataStreamName === DATA_STREAM_NAME
       );
 
       if (!existing) {
-        throw new Error(`Cannot find existing DataSource for user ${userId}`);
+        throw new Error(`Cannot find existing DataSource`);
       }
 
       const dataSourceId = existing.dataStreamId;
       console.log(`✅ Found existing DataSource: ${dataSourceId}`);
 
-      // Lưu vào DB
-      await Token.findOneAndUpdate({ userId }, { dataSourceId }, { new: true });
+      // Lưu vào DB using MongoDB userId
+      await Token.findOneAndUpdate({ userId: dbUserId }, { dataSourceId }, { new: true });
       return dataSourceId;
     }
     throw err;
@@ -58,24 +63,32 @@ export async function ensureDataSource(auth, userId) {
 
 /**
  * Lấy dataSourceId từ DB hoặc tạo mới nếu chưa có
+ * @param {OAuth2Client} auth - Authenticated OAuth2 client
+ * @param {string} dbUserId - MongoDB user ID
  */
-export async function getDataSourceId(auth, userId) {
-  const tokenDoc = await Token.findOne({ userId });
+export async function getDataSourceId(auth, dbUserId) {
+  const tokenDoc = await Token.findOne({ userId: dbUserId });
   
   if (tokenDoc?.dataSourceId) {
     return tokenDoc.dataSourceId;
   }
 
   // Chưa có trong DB, tạo mới
-  return await ensureDataSource(auth, userId);
+  return await ensureDataSource(auth, dbUserId);
 }
 
 /**
  * Thêm bước vào Google Fit theo thời gian thực
+ * @param {OAuth2Client} auth - Authenticated OAuth2 client
+ * @param {string} dbUserId - MongoDB user ID
+ * @param {number} steps - Number of steps to add
  */
-export async function insertSteps(auth, userId, steps = 1000) {
+export async function insertSteps(auth, dbUserId, steps = 1000) {
   const fitness = google.fitness({ version: 'v1', auth });
-  const dataSourceId = await getDataSourceId(auth, userId);
+  const dataSourceId = await getDataSourceId(auth, dbUserId);
+  
+  // Always use "me" for Google Fit API
+  const fitUserId = "me";
 
   const now = Date.now();
   
@@ -103,13 +116,13 @@ export async function insertSteps(auth, userId, steps = 1000) {
 
   try {
     const response = await fitness.users.dataSources.datasets.patch({
-      userId: 'me',
+      userId: fitUserId,
       dataSourceId,
       datasetId,
       requestBody: body,
     });
 
-    console.log(`✅ Added ${steps} steps for user ${userId} at ${new Date(endTime).toLocaleString()}`);
+    console.log(`✅ Added ${steps} steps at ${new Date(endTime).toLocaleString()}`);
     return response.data;
   } catch (err) {
     console.error(`❌ Failed to add steps:`, err.message);
@@ -119,9 +132,11 @@ export async function insertSteps(auth, userId, steps = 1000) {
 
 /**
  * Giả lập đi bộ tự nhiên trong ngày
- * Phân bổ steps theo các khung giờ hợp lý
+ * @param {OAuth2Client} auth - Authenticated OAuth2 client
+ * @param {string} dbUserId - MongoDB user ID
+ * @param {number} totalSteps - Total steps to distribute throughout the day
  */
-export async function simulateNaturalSteps(auth, userId, totalSteps = 10000) {
+export async function simulateNaturalSteps(auth, dbUserId, totalSteps = 10000) {
   const hoursToDistribute = [
     { hour: 7, ratio: 0.05 },  // 5% - Sáng sớm
     { hour: 8, ratio: 0.10 },  // 10% - Đi làm
@@ -133,7 +148,10 @@ export async function simulateNaturalSteps(auth, userId, totalSteps = 10000) {
   ];
 
   const fitness = google.fitness({ version: 'v1', auth });
-  const dataSourceId = await getDataSourceId(auth, userId);
+  const dataSourceId = await getDataSourceId(auth, dbUserId);
+  
+  // Always use "me" for Google Fit API
+  const fitUserId = "me";
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -166,7 +184,7 @@ export async function simulateNaturalSteps(auth, userId, totalSteps = 10000) {
 
     try {
       await fitness.users.dataSources.datasets.patch({
-        userId: 'me',
+        userId: fitUserId,
         dataSourceId,
         datasetId,
         requestBody: body,

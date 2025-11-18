@@ -1,46 +1,79 @@
 // src/cron/addSteps.cron.js
 import cron from 'node-cron';
+import { io } from '../app.js'; // import socket.io
 import Token from '../models/token.model.js';
-import { getOAuthClient } from '../utils/oauth.util.js';
+import { UserSetting } from '../models/userSetting.model.js';
 import { insertSteps } from '../services/fitService.js';
+import { getOAuthClient } from '../utils/oauth.util.js';
 
-export function startAddStepsCron() {
-  // Chạy mỗi 5 phút (tự nhiên hơn)
-  cron.schedule('*/1 * * * *', async () => {
-    const currentHour = new Date().getHours();
-    
-    // Chỉ chạy trong giờ hợp lý (6h - 23h)
-    // if (currentHour < 6 || currentHour > 23) {
-    //   console.log('⏰ Outside active hours, skipping...');
-    //   return;
-    // }
+function isWithinAllowedTime(startTime, endTime) {
+  const now = new Date();
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
 
-    console.log('⏰ Cron running: add steps...');
+  const startDate = new Date();
+  startDate.setHours(startH, startM, 0, 0);
 
-    try {
-      const users = await Token.find();
+  const endDate = new Date();
+  endDate.setHours(endH, endM, 0, 0);
 
-      for (const user of users) {
+  return now >= startDate && now <= endDate;
+}
+
+function getCronExpression(cronTime, cronUnit) {
+  switch (cronUnit) {
+    case 'minutes':
+      return `*/${cronTime} * * * *`;
+    case 'hours':
+      return `0 */${cronTime} * * *`;
+    case 'days':
+      return `0 0 */${cronTime} * *`;
+    default:
+      return '*/5 * * * *';
+  }
+}
+
+function emitLog(userId, type, msg) {
+  const time = new Date().toLocaleTimeString();
+  io.emit('cron-log', { userId, type, time, msg });
+  console.log(`[${time}] [${userId}] ${msg}`);
+}
+
+export async function startAddStepsCron() {
+  try {
+    const users = await Token.find();
+
+    for (const user of users) {
+      const setting = await UserSetting.findOne({ userId: user.userId });
+      if (!setting || !setting.cronEnabled) continue;
+
+      const cronExp = getCronExpression(setting.cronTime, setting.cronUnit);
+
+      cron.schedule(cronExp, async () => {
+        if (!isWithinAllowedTime(setting.allowedStartTime, setting.allowedEndTime)) {
+          emitLog(user.userId, 'warning', '⏰ Ngoài giờ chạy, bỏ qua...');
+          return;
+        }
+
         try {
           const auth = await getOAuthClient(user.userId);
-          
-          // Random steps 200-500 mỗi 5 phút (tự nhiên hơn)
-          const steps = Math.floor(Math.random() * 300) + 200;
-          
+          let steps;
+          if (setting.randomStepsEnabled) {
+            steps = Math.floor(Math.random() * (setting.stepMax - setting.stepMin + 1)) + setting.stepMin;
+          } else {
+            steps = setting.stepIncrement;
+          }
+
           await insertSteps(auth, user.userId, steps);
-          console.log(`✅ Added ${steps} steps for user ${user.userId}`);
-          
-          // Delay giữa các users
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          emitLog(user.userId, 'success', `✅ Đã thêm ${steps} bước`);
         } catch (err) {
-          console.error(`❌ Error for user ${user.userId}:`, err.message);
+          emitLog(user.userId, 'error', `❌ Lỗi: ${err.message}`);
         }
-      }
+      });
 
-    } catch (err) {
-      console.error('❌ Cron job error:', err.message);
+      emitLog(user.userId, 'info', `✅ Cron đã lên lịch: ${cronExp}`);
     }
-  });
-
-  console.log('✅ Cron job started: Add steps every 5 minutes');
+  } catch (err) {
+    emitLog('SYSTEM', 'error', `❌ Cron khởi tạo lỗi: ${err.message}`);
+  }
 }

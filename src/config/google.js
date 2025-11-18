@@ -3,6 +3,8 @@ import Token from "../models/token.model.js";
 // import { createDataSource } from "../services/fitService.js";
 
 const SCOPES = [
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/fitness.activity.write',
   'https://www.googleapis.com/auth/fitness.activity.read'
 ];

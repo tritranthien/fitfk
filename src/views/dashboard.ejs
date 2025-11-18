@@ -1,0 +1,156 @@
+<div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
+  <div class="flex items-center space-x-4 mb-6">
+    <img class="w-16 h-16 rounded-full" src="<%= user.avatar %>" alt="Avatar">
+    <div>
+      <h1 class="text-2xl font-semibold">Xin chào, <%= user.name %>
+      </h1>
+      <p class="text-gray-500">Quản lý cài đặt cron của bạn</p>
+    </div>
+  </div>
+
+  <form action="/settings" method="POST" class="space-y-6">
+    <!-- Bật/tắt Cron -->
+    <div class="flex items-center justify-between">
+      <span class="text-lg font-medium text-gray-700">Bật Cron</span>
+      <label class="inline-flex relative items-center cursor-pointer">
+        <input type="checkbox" name="cronEnabled" value="1" class="sr-only peer" <%=setting.cronEnabled ? 'checked' : ''
+          %>>
+        <div class="w-14 h-8 bg-gray-300 rounded-full peer peer-checked:bg-blue-500 transition-colors"></div>
+        <span
+          class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md peer-checked:translate-x-6 transition-transform"></span>
+        <span class="ml-4 text-gray-700 font-medium">
+          <%= setting.cronEnabled ? 'BẬT' : 'TẮT' %>
+        </span>
+      </label>
+    </div>
+
+    <!-- Chu kỳ chạy -->
+    <div class="flex flex-col">
+      <label class="text-gray-700 font-medium mb-2">Chu kỳ chạy</label>
+      <div class="flex space-x-2 items-center">
+        <input type="number" name="cronTime" value="<%= setting.cronTime %>" min="1"
+          class="border border-gray-300 rounded px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <select name="cronUnit"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <option value="minutes" <%=setting.cronUnit==='minutes' ? 'selected' : '' %>>Phút</option>
+          <option value="hours" <%=setting.cronUnit==='hours' ? 'selected' : '' %>>Giờ</option>
+          <option value="days" <%=setting.cronUnit==='days' ? 'selected' : '' %>>Ngày</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Khoảng thời gian cho phép chạy -->
+    <div class="flex space-x-4">
+      <div class="flex flex-col">
+        <label class="text-gray-700 font-medium mb-2">Bắt đầu</label>
+        <input type="time" name="allowedStartTime" value="<%= setting.allowedStartTime %>"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+      <div class="flex flex-col">
+        <label class="text-gray-700 font-medium mb-2">Kết thúc</label>
+        <input type="time" name="allowedEndTime" value="<%= setting.allowedEndTime %>"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+    </div>
+
+    <!-- Số bước mỗi lần chạy -->
+    <div class="flex flex-col">
+      <label class="text-gray-700 font-medium mb-2">Số bước thêm mỗi lần chạy</label>
+      <input type="number" name="stepIncrement" value="<%= setting.stepIncrement %>" min="0"
+        class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+    <!-- Random Steps Toggle -->
+    <div class="flex items-center justify-between">
+      <span class="text-lg font-medium text-gray-700">Bật random bước</span>
+      <label class="inline-flex relative items-center cursor-pointer">
+        <input type="checkbox" name="randomStepsEnabled" class="sr-only peer" <%=setting.randomStepsEnabled ? 'checked'
+          : '' %>>
+        <div class="w-14 h-8 bg-gray-300 rounded-full peer peer-checked:bg-blue-500 transition-colors"></div>
+        <span
+          class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md peer-checked:translate-x-6 transition-transform"></span>
+        <span class="ml-4 text-gray-700 font-medium">
+          <%= setting.randomStepsEnabled ? 'BẬT' : 'TẮT' %>
+        </span>
+      </label>
+    </div>
+
+    <!-- Khoảng random -->
+    <div class="flex space-x-2">
+      <div class="flex flex-col">
+        <label class="text-gray-700 font-medium mb-2">Bước min</label>
+        <input type="number" name="stepMin" value="<%= setting.stepMin %>" min="0"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+      <div class="flex flex-col">
+        <label class="text-gray-700 font-medium mb-2">Bước max</label>
+        <input type="number" name="stepMax" value="<%= setting.stepMax %>" min="0"
+          class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+    </div>
+
+    <!-- Lưu cài đặt -->
+    <button type="submit"
+      class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded shadow font-semibold transition">
+      Lưu cài đặt
+    </button>
+  </form>
+  <form id="manualStepForm" class="flex space-x-2 items-center mt-6">
+    <input type="number" name="steps" min="1" placeholder="Nhập số bước"
+      class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 w-36" />
+    <button type="submit"
+      class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded shadow font-semibold transition">
+      Thêm bước
+    </button>
+  </form>
+</div>
+<div class="mt-10 bg-gray-50 p-4 rounded-lg shadow h-64 overflow-y-auto">
+  <h2 class="text-lg font-semibold mb-2">Nhật ký Cron</h2>
+  <ul id="log-list" class="space-y-1 text-sm"></ul>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const logList = document.getElementById('log-list');
+
+  const typeColors = {
+    success: 'text-green-600',
+    error: 'text-red-600',
+    warning: 'text-yellow-600',
+    info: 'text-blue-600'
+  };
+
+  socket.on('cron-log', ({ userId, type, time, msg }) => {
+    const li = document.createElement('li');
+    li.className = `${typeColors[type] || 'text-gray-700'} font-mono`;
+    li.innerHTML = `<span class="font-semibold">${time} [${userId}]</span> - ${msg}`;
+    logList.appendChild(li);
+    logList.scrollTop = logList.scrollHeight; // auto scroll
+  });
+  const form = document.getElementById('manualStepForm');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // ngăn reload page
+
+    const steps = form.steps.value;
+    if (!steps || steps <= 0) return alert('Số bước không hợp lệ');
+
+    try {
+      const res = await fetch('/steps/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        console.log('✅ Thêm bước thành công:', data);
+        form.reset();
+      } else {
+        alert(data.message || 'Lỗi');
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+</script>
