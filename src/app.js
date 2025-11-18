@@ -6,7 +6,6 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import expressLayouts from "express-ejs-layouts";
-
 import StepRoutes from "./routes/stepsRoute.js";
 import OAuthRoutes from "./routes/oauth.routes.js";
 import SettingRoutes from "./routes/setting.route.js";
@@ -16,6 +15,9 @@ import { ensureAuthWithGoogle } from "./midlewares/requireAuth.js";
 import { User } from "./models/user.model.js";
 import { UserSetting } from "./models/userSetting.model.js";
 import { Server } from 'socket.io';
+import { stopAllCrons } from "./cron/addStepsCron.js";
+import cronLogRoutes from './routes/cronLog.route.js';
+import MongoStore from 'connect-mongo';
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,12 +26,19 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'mysecret', // khóa bí mật
-  resave: false,   // không lưu session nếu không thay đổi
-  saveUninitialized: false, // không lưu session mới nếu chưa gán dữ liệu
-  cookie: { maxAge: 1000 * 60 * 60 * 24 } // 1 ngày
+  secret: process.env.SESSION_SECRET || 'mysecret',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    touchAfter: 24 * 3600 // lazy session update (24 giờ)
+  }),
+  cookie: { 
+    maxAge: 1000 * 60 * 60 * 24, // 1 ngày
+    secure: process.env.NODE_ENV === 'production', // chỉ dùng HTTPS khi production
+    httpOnly: true
+  }
 }));
-
 
 // Body parser
 app.use(bodyParser.json());
@@ -52,7 +61,6 @@ app.get('/', ensureAuthWithGoogle, async (req, res) => {
     if (!setting) {
       setting = await UserSetting.create({ userId: user._id });
     }
-
     res.render('dashboard', { user, setting, title: "Dashboard" });
   } catch (err) {
     console.error(err);
@@ -70,14 +78,15 @@ app.get("/login", (req, res) => {
 app.use("/steps", ensureAuthWithGoogle,StepRoutes);
 app.use("/oauth",OAuthRoutes);
 app.use("/settings", ensureAuthWithGoogle,SettingRoutes);
+app.use('/api/cronlogs',cronLogRoutes);
 
 // Connect MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("MongoDB connected"))
-.catch((err) => console.error("MongoDB connection error:", err));
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  });
 
 const httpServer = app.listen(process.env.PORT, () => {
   console.log(`Server running on ${process.env.PORT}`);
@@ -91,5 +100,15 @@ export const io = new Server(httpServer, {
 io.on('connection', (socket) => {
   console.log('⚡ New client connected:', socket.id);
 });
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, stopping cron jobs...');
+  stopAllCrons();
+  process.exit(0);
+});
 
+process.on('SIGINT', () => {
+  console.log('SIGINT received, stopping cron jobs...');
+  stopAllCrons();
+  process.exit(0);
+});
 export default app;

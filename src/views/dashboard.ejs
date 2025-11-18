@@ -2,8 +2,7 @@
   <div class="flex items-center space-x-4 mb-6">
     <img class="w-16 h-16 rounded-full" src="<%= user.avatar %>" alt="Avatar">
     <div>
-      <h1 class="text-2xl font-semibold">Xin chào, <%= user.name %>
-      </h1>
+      <h1 class="text-2xl font-semibold">Xin chào, <%= user.name %></h1>
       <p class="text-gray-500">Quản lý cài đặt cron của bạn</p>
     </div>
   </div>
@@ -13,11 +12,10 @@
     <div class="flex items-center justify-between">
       <span class="text-lg font-medium text-gray-700">Bật Cron</span>
       <label class="inline-flex relative items-center cursor-pointer">
-        <input type="checkbox" name="cronEnabled" value="1" class="sr-only peer" <%=setting.cronEnabled ? 'checked' : ''
-          %>>
+        <input type="checkbox" name="cronEnabled" value="1" class="sr-only peer" 
+          <%= setting.cronEnabled ? 'checked' : '' %>>
         <div class="w-14 h-8 bg-gray-300 rounded-full peer peer-checked:bg-blue-500 transition-colors"></div>
-        <span
-          class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md peer-checked:translate-x-6 transition-transform"></span>
+        <span class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md peer-checked:translate-x-6 transition-transform"></span>
         <span class="ml-4 text-gray-700 font-medium">
           <%= setting.cronEnabled ? 'BẬT' : 'TẮT' %>
         </span>
@@ -32,9 +30,9 @@
           class="border border-gray-300 rounded px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-blue-400" />
         <select name="cronUnit"
           class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
-          <option value="minutes" <%=setting.cronUnit==='minutes' ? 'selected' : '' %>>Phút</option>
-          <option value="hours" <%=setting.cronUnit==='hours' ? 'selected' : '' %>>Giờ</option>
-          <option value="days" <%=setting.cronUnit==='days' ? 'selected' : '' %>>Ngày</option>
+          <option value="minutes" <%= setting.cronUnit==='minutes' ? 'selected' : '' %>>Phút</option>
+          <option value="hours" <%= setting.cronUnit==='hours' ? 'selected' : '' %>>Giờ</option>
+          <option value="days" <%= setting.cronUnit==='days' ? 'selected' : '' %>>Ngày</option>
         </select>
       </div>
     </div>
@@ -59,15 +57,15 @@
       <input type="number" name="stepIncrement" value="<%= setting.stepIncrement %>" min="0"
         class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
     </div>
+
     <!-- Random Steps Toggle -->
     <div class="flex items-center justify-between">
       <span class="text-lg font-medium text-gray-700">Bật random bước</span>
       <label class="inline-flex relative items-center cursor-pointer">
-        <input type="checkbox" name="randomStepsEnabled" class="sr-only peer" <%=setting.randomStepsEnabled ? 'checked'
-          : '' %>>
+        <input type="checkbox" name="randomStepsEnabled" class="sr-only peer" 
+          <%= setting.randomStepsEnabled ? 'checked' : '' %>>
         <div class="w-14 h-8 bg-gray-300 rounded-full peer peer-checked:bg-blue-500 transition-colors"></div>
-        <span
-          class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md peer-checked:translate-x-6 transition-transform"></span>
+        <span class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow-md peer-checked:translate-x-6 transition-transform"></span>
         <span class="ml-4 text-gray-700 font-medium">
           <%= setting.randomStepsEnabled ? 'BẬT' : 'TẮT' %>
         </span>
@@ -94,6 +92,7 @@
       Lưu cài đặt
     </button>
   </form>
+
   <form id="manualStepForm" class="flex space-x-2 items-center mt-6">
     <input type="number" name="steps" min="1" placeholder="Nhập số bước"
       class="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400 w-36" />
@@ -103,15 +102,41 @@
     </button>
   </form>
 </div>
-<div class="mt-10 bg-gray-50 p-4 rounded-lg shadow h-64 overflow-y-auto">
-  <h2 class="text-lg font-semibold mb-2">Nhật ký Cron</h2>
-  <ul id="log-list" class="space-y-1 text-sm"></ul>
+
+<!-- Logs Section -->
+<div class="max-w-4xl mx-auto mt-6 bg-gray-50 p-4 rounded-lg shadow">
+  <div class="flex justify-between items-center mb-3">
+    <h2 class="text-lg font-semibold">Nhật ký Cron</h2>
+    <div class="space-x-2">
+      <button id="loadMoreBtn" class="text-blue-600 hover:text-blue-800 text-sm font-medium hidden">
+        Tải thêm
+      </button>
+      <button id="clearLogsBtn" class="text-red-600 hover:text-red-800 text-sm font-medium">
+        Xóa tất cả
+      </button>
+    </div>
+  </div>
+  
+  <div id="log-container" class="h-64 overflow-y-auto">
+    <ul id="log-list" class="space-y-1 text-sm"></ul>
+    <div id="loading" class="text-center py-4 text-gray-500 hidden">
+      <span class="animate-pulse">Đang tải...</span>
+    </div>
+  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
   const logList = document.getElementById('log-list');
+  const loading = document.getElementById('loading');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const clearLogsBtn = document.getElementById('clearLogsBtn');
+  const userId = '<%= user._id %>';
+  
+  let currentPage = 1;
+  let totalPages = 1;
+  const limit = 50;
 
   const typeColors = {
     success: 'text-green-600',
@@ -120,17 +145,105 @@
     info: 'text-blue-600'
   };
 
-  socket.on('cron-log', ({ userId, type, time, msg }) => {
-    const li = document.createElement('li');
-    li.className = `${typeColors[type] || 'text-gray-700'} font-mono`;
-    li.innerHTML = `<span class="font-semibold">${time} [${userId}]</span> - ${msg}`;
-    logList.appendChild(li);
-    logList.scrollTop = logList.scrollHeight; // auto scroll
-  });
-  const form = document.getElementById('manualStepForm');
+  // Format timestamp từ DB
+  function formatTimestamp(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleString('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  }
 
+  // Thêm log vào list
+  function addLogToList(log, prepend = false) {
+    const li = document.createElement('li');
+    li.className = `${typeColors[log.type] || 'text-gray-700'} font-mono`;
+    const time = log.time || formatTimestamp(log.createdAt);
+    const logUserId = log.userId || userId;
+    li.innerHTML = `<span class="font-semibold">${time} [${logUserId}]</span> - ${log.message || log.msg}`;
+    
+    if (prepend) {
+      logList.prepend(li);
+    } else {
+      logList.appendChild(li);
+    }
+  }
+
+  // Load logs từ DB
+  async function loadLogs(page = 1, append = false) {
+    try {
+      loading.classList.remove('hidden');
+      
+      const res = await fetch(`/api/cronlogs/${userId}?page=${page}&limit=${limit}`);
+      const data = await res.json();
+      
+      if (!append) {
+        logList.innerHTML = '';
+      }
+      
+      data.logs.forEach(log => addLogToList(log, false));
+      
+      currentPage = parseInt(data.currentPage);
+      totalPages = data.totalPages;
+      
+      // Hiển thị nút "Tải thêm" nếu còn trang
+      if (currentPage < totalPages) {
+        loadMoreBtn.classList.remove('hidden');
+      } else {
+        loadMoreBtn.classList.add('hidden');
+      }
+      
+      // Auto scroll xuống dưới nếu là lần load đầu
+      if (!append) {
+        logList.parentElement.scrollTop = logList.parentElement.scrollHeight;
+      }
+      
+    } catch (err) {
+      console.error('Lỗi load logs:', err);
+    } finally {
+      loading.classList.add('hidden');
+    }
+  }
+
+  // Load more logs
+  loadMoreBtn.addEventListener('click', () => {
+    loadLogs(currentPage + 1, true);
+  });
+
+  // Clear all logs
+  clearLogsBtn.addEventListener('click', async () => {
+    if (!confirm('Bạn có chắc muốn xóa tất cả logs?')) return;
+    
+    try {
+      const res = await fetch(`/api/cronlogs/${userId}`, { method: 'DELETE' });
+      const data = await res.json();
+      
+      if (res.ok) {
+        logList.innerHTML = '';
+        loadMoreBtn.classList.add('hidden');
+        alert(data.message);
+      }
+    } catch (err) {
+      alert('Lỗi xóa logs: ' + err.message);
+    }
+  });
+
+  // Real-time socket logs
+  socket.on('cron-log', ({ userId: logUserId, type, time, msg }) => {
+    // Chỉ hiển thị log của user hiện tại hoặc SYSTEM
+    if (logUserId === userId || logUserId === 'SYSTEM') {
+      addLogToList({ userId: logUserId, type, time, msg }, true);
+      logList.parentElement.scrollTop = 0; // scroll lên top để thấy log mới
+    }
+  });
+
+  // Manual step form
+  const form = document.getElementById('manualStepForm');
   form.addEventListener('submit', async (e) => {
-    e.preventDefault(); // ngăn reload page
+    e.preventDefault();
 
     const steps = form.steps.value;
     if (!steps || steps <= 0) return alert('Số bước không hợp lệ');
@@ -153,4 +266,7 @@
       alert(err.message);
     }
   });
+
+  // Load logs khi trang được tải
+  loadLogs(1);
 </script>

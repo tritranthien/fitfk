@@ -29,7 +29,6 @@ router.get('/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
     const profile = await userInfoRes.json();
-    console.log(profile, tokens, "tridey");
     
     // 3️⃣ Tạo hoặc update User
     let user = await User.findOne({ googleId: profile.id });

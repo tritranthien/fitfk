@@ -1,6 +1,7 @@
 import express from 'express';
 import { ensureAuthWithGoogle } from "../midlewares/requireAuth.js";
 import { UserSetting } from "../models/userSetting.model.js";
+import { startCronForUser, stopCronForUser } from '../cron/addStepsCron.js';
 const router = express.Router();
 router.post('/', ensureAuthWithGoogle, async (req, res) => {
   const {
@@ -11,7 +12,7 @@ router.post('/', ensureAuthWithGoogle, async (req, res) => {
     allowedStartTime, allowedEndTime
   } = req.body;
 
-  await UserSetting.findOneAndUpdate(
+  const setting = await UserSetting.findOneAndUpdate(
     { userId: req.session.userId },
     {
       cronEnabled: !!cronEnabled,
@@ -29,7 +30,11 @@ router.post('/', ensureAuthWithGoogle, async (req, res) => {
     },
     { upsert: true, new: true }
   );
-
+  if (setting.cronEnabled) {
+    await startCronForUser(req.session.userId);
+  } else {
+    stopCronForUser(req.session.userId);
+  }
   res.redirect('/');
 });
 
